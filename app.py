@@ -1,16 +1,13 @@
 import os
 import sys
-import subprocess
-import importlib
+import types
 
-# --- BULLETPROOF RUNTIME BOOTSTRAP PATCH ---
-# Force-install setuptools and explicitly refresh the workspace import tracking environment
-try:
-    import pkg_resources
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "setuptools"])
-    importlib.invalidate_caches()  # <--- Forces Python to re-scan the drive for the new module
-    import pkg_resources
+# --- BULLETPROOF RUNTIME MEMORY MOCK PATCH ---
+# Force-create a dummy pkg_resources module in system memory to satisfy legacy CrewAI telemetry
+IMAGINARY_PKG = types.ModuleType("pkg_resources")
+IMAGINARY_PKG.declare_namespace = lambda name: None
+IMAGINARY_PKG.get_distribution = lambda name: types.SimpleNamespace(version="0.28.8")
+sys.modules["pkg_resources"] = IMAGINARY_PKG
 # ──────────────────────────────────────
 
 import streamlit as st

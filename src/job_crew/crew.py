@@ -1,11 +1,10 @@
 import os
-import streamlit as st  # Explicitly import streamlit to read configurations
-from crewai import Agent, Crew, Process, Task, LLM
+import streamlit as st  
+from crewai import Agent, Crew, Process, Task # <--- REMOVED 'LLM' FROM HERE
 from crewai_tools import ScrapeWebsiteTool, SerperDevTool
+from langchain_openai import ChatOpenAI # <--- ADD THIS IMPORT FOR THE LLM
 
 class JobApplicationCrew:
-    """Explicit multi-agent engine instance avoiding YAML layout dependencies"""
-    
     def __init__(self) -> None:
         # 1. Extract and sanitize keys
         openrouter_key = str(st.secrets["OPENROUTER_API_KEY"]).strip()
@@ -15,15 +14,16 @@ class JobApplicationCrew:
         os.environ["OPENROUTER_API_KEY"] = openrouter_key
         os.environ["SERPER_API_KEY"] = serper_key
 
-        # 3. Configure the LLM for OpenRouter
-        # In modern CrewAI, we pass the base_url and api_key inside the llm dict config
-        self.openrouter_llm = LLM(
+        # 3. Configure OpenRouter using ChatOpenAI (Native to version 0.28.8)
+        self.openrouter_llm = ChatOpenAI(
             model="openrouter/openai/gpt-oss-120b",
-            config={
-                "base_url": "https://openrouter.ai/api/v1",
-                "api_key": openrouter_key
-            }
+            openai_api_base="https://openrouter.ai/api/v1",
+            openai_api_key=openrouter_key
         )
+
+        # 4. Initialize web tools
+        self.search_tool = SerperDevTool()
+        self.scrape_tool = ScrapeWebsiteTool()
 
         # 4. Initialize web tools
         self.search_tool = SerperDevTool()

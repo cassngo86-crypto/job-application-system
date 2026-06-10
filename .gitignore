@@ -1,0 +1,13 @@
+.env
+.streamlit/secrets.toml
+__pycache__/
+.venv/
+.vscode/
+
+# Ignore local generated outputs
+*.md
+*.txt
+*.docx
+
+# EXCEPTION: Force Git to track requirements.txt even though we are ignoring *.txt
+!requirements.txt

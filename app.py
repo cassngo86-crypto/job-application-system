@@ -13,6 +13,7 @@ except ImportError:
 import streamlit as st
 import threading
 import os
+import sys
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 import io
 from docx import Document

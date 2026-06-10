@@ -7,19 +7,23 @@ class JobApplicationCrew:
     """Explicit multi-agent engine instance avoiding YAML layout dependencies"""
     
     def __init__(self) -> None:
-        # Securely grab keys directly from Streamlit Secrets tracking context
-        openrouter_key = st.secrets["OPENROUTER_API_KEY"]
-        serper_key = st.secrets["SERPER_API_KEY"]
+        # 1. Safely extract and explicitly sanitize keys as standard Python strings
+        openrouter_key = str(st.secrets["OPENROUTER_API_KEY"]).strip()
+        serper_key = str(st.secrets["SERPER_API_KEY"]).strip()
         
-        # Explicitly configure the LLM object for OpenRouter using the secret key
+        # 2. Inject them cleanly into the environment variables CrewAI checks globally
+        os.environ["OPENROUTER_API_KEY"] = openrouter_key
+        os.environ["SERPER_API_KEY"] = serper_key
+        os.environ["OPENAI_API_KEY"] = openrouter_key  # Fallback routing for framework compliance
+
+        # 3. Configure the LLM object with the sanitized string key
         self.openrouter_llm = LLM(
             model="openrouter/openai/gpt-oss-120b", 
             base_url="https://openrouter.ai/api/v1",
             api_key=openrouter_key
         )
 
-        # Initialize required web orchestration tools with your secure Serper key
-        os.environ["SERPER_API_KEY"] = serper_key
+        # 4. Initialize web orchestration tools now that the environment strings are mapped
         self.search_tool = SerperDevTool()
         self.scrape_tool = ScrapeWebsiteTool()
 

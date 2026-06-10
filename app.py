@@ -19,7 +19,7 @@ from docx import Document
 
 # 3. Add source directory path and import your crew module
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
-from job_crew.crew import JobApplicationCrew
+from src.job_crew.crew import JobApplicationCrew
 
 # ... (Keep the rest of your app.py file exactly the same)
 

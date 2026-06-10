@@ -1,13 +1,15 @@
 import os
 import sys
 import subprocess
+import importlib
 
-# --- EMERGENCY CACHE SMASHING PATCH ---
-# Force-install setuptools directly into the live container runtime before CrewAI can load
+# --- BULLETPROOF RUNTIME BOOTSTRAP PATCH ---
+# Force-install setuptools and explicitly refresh the workspace import tracking environment
 try:
     import pkg_resources
 except ImportError:
     subprocess.check_call([sys.executable, "-m", "pip", "install", "setuptools"])
+    importlib.invalidate_caches()  # <--- Forces Python to re-scan the drive for the new module
     import pkg_resources
 # ──────────────────────────────────────
 

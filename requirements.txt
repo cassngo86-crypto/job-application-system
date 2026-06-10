@@ -2,4 +2,4 @@ streamlit>=1.30.0
 crewai==0.28.8
 crewai-tools==0.1.6
 python-docx>=1.1.0
-setuptools
+setuptools-scm>=7.0.0

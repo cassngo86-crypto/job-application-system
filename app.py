@@ -1,28 +1,26 @@
-# 1. FORCIBLY LOAD ENVIRONMENT VARIABLES BEFORE ANYTHING ELSE
-from dotenv import load_dotenv
-load_dotenv()
-
-# 2. Apply SQLite system patches
-try:
-    import pysqlite3
-    import sys
-    sys.modules['sqlite3'] = pysqlite3
-except ImportError:
-    pass
-
-import streamlit as st
-import threading
 import os
 import sys
-from streamlit.runtime.scriptrunner import add_script_run_ctx
+import subprocess
+
+# --- EMERGENCY CACHE SMASHING PATCH ---
+# Force-install setuptools directly into the live container runtime before CrewAI can load
+try:
+    import pkg_resources
+except ImportError:
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "setuptools"])
+    import pkg_resources
+# ──────────────────────────────────────
+
+import streamlit as st
 import io
 from docx import Document
+import threading
+from streamlit.runtime.scriptrunner import add_script_run_ctx
 
-# 3. Add source directory path and import your crew module
+# Add source directory path and import your crew module
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
 from src.job_crew.crew import JobApplicationCrew
 
-# ... (Keep the rest of your app.py file exactly the same)
 
 st.set_page_config(page_title="AI Application Tailoring Crew", page_icon="💼", layout="wide")
 

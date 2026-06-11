@@ -112,35 +112,80 @@ with st.sidebar:
         ["Provide Profile URL (LinkedIn / GitHub / Portfolio)", "Upload Profile Document (TXT / MD)"]
     )
     
-    profile_url_input = ""
-    uploaded_text_content = ""
-    
-    if profile_source == "Provide Profile URL (LinkedIn / GitHub / Portfolio)":
-        profile_url_input = st.text_input("Profile URL", value="https://github.com/joaomdmoura")
-    else:
-        uploaded_file = st.file_uploader("Upload background profile or existing resume", type=["txt", "md"])
-        if uploaded_file is not None:
-            # Safely decode binary stream payload to string data
-            uploaded_text_content = uploaded_file.read().decode("utf-8")
-            st.success("File uploaded successfully!")
+    #
+    # 1. Initialize session state keys at the very top of your input section
+# =====================================================================
+# STEP 1: INITIALIZE ALL STATE KEYS AND VARIABLES AT THE VERY TOP
+# =====================================================================
+if "uploaded_text_content" not in st.session_state:
+    st.session_state.uploaded_text_content = ""
 
-    st.markdown("---")
-    
-    # 2. Text Summary Box
-    text_summary = st.text_area(
-        "Professional Summary / Additional Context",
-        value="Jansen is an accomplished Software Engineering Leader with 18 years of experience, specializing in managing remote and in-office teams.",
-        height=150
+if "strategy_data" not in st.session_state:
+    st.session_state.strategy_data = None
+if "resume_data" not in st.session_state:
+    st.session_state.resume_data = None
+if "questions_data" not in st.session_state:
+    st.session_state.questions_data = None
+if "talking_points_data" not in st.session_state:
+    st.session_state.talking_points_data = None
+
+# Pre-define fallback variables to guarantee they ALWAYS exist
+profile_url_input = ""
+uploaded_text_content = ""
+text_summary = ""
+
+
+# =====================================================================
+# STEP 2: RENDER THE USER INTERFACE INPUT FIELDS
+# =====================================================================
+# Main Bio/Resume Text Input Area
+text_summary = st.text_area(
+    "Paste Personal Bio or Background Summary", 
+    value="Experienced Software Engineer with a background in full-stack systems..."
+)
+
+# Profile Source Selection & File Uploader Block
+if profile_source == "Provide Profile URL (LinkedIn / GitHub / Portfolio)":
+    profile_url_input = st.text_input("Profile URL", value="https://github.com/joaomdmoura")
+else:
+    uploaded_file = st.file_uploader(
+        "Upload background profile or existing resume", 
+        type=["txt", "md"],
+        key="profile_file_uploader"
     )
     
-    submit_btn = st.button("Kickoff Crew Agents", disabled=st.session_state.crew_running)
+    if uploaded_file is not None:
+        try:
+            file_bytes = uploaded_file.read()
+            text_content = file_bytes.decode("utf-8")
+            
+            # Lock into memory safely
+            if st.session_state.uploaded_text_content != text_content:
+                st.session_state.uploaded_text_content = text_content
+                st.success("File uploaded and saved to memory successfully!")
+        except Exception as e:
+            st.error(f"Error reading file stream: {str(e)}")
 
-# Controller Action
+    # Pull latest data from stable session memory
+    uploaded_text_content = st.session_state.uploaded_text_content
+
+st.markdown("---")
+
+
+# =====================================================================
+# STEP 3: THE ACTION TRIGGER BUTTON
+# =====================================================================
+submit_btn = st.button("Kickoff Crew Agents", disabled=st.session_state.crew_running)
+
+
+# =====================================================================
+# STEP 4: THE CONTROLLER ACTION BLOCK (READS COMPLETED STEP 1 & 2 DATA)
+# =====================================================================
 if submit_btn and not st.session_state.crew_running:
     st.session_state.crew_running = True
     st.session_state.crew_result = None
     
-    # Reset stored outputs on a new manual run
+    # Reset stored outputs on a new fresh run
     st.session_state.strategy_data = None
     st.session_state.resume_data = None
     st.session_state.questions_data = None
@@ -151,9 +196,9 @@ if submit_btn and not st.session_state.crew_running:
     if uploaded_text_content:
         final_writeup += f"\n\n--- EMBEDDED ATTACHMENT PROFILE CONTENT ---\n{uploaded_text_content}"
     
-    # Format inputs dynamically to match our updated tasks configuration map
+    # ✅ NOW crew_inputs CANNOT THROW A NAMEERROR BECAUSE EVERYTHING ABOVE IS LOADED
     crew_inputs = {
-        'job_posting_url': job_url,
+        'job_posting_url': job_url, # Ensure job_url widget is placed above this section
         'profile_urls': profile_url_input if profile_url_input else "No URL provided; check text/attachment profile data.",
         'personal_writeup': final_writeup
     }
@@ -161,17 +206,17 @@ if submit_btn and not st.session_state.crew_running:
     # ─── RUN THE CREW NATIVELY HERE ───
     with st.spinner("Formulating strategy... The crew is analyzing your data live."):
         try:
-            # Clean up old files from past system sessions
+            # Clean up residual layout files
             for f in ['strategy_output.md', 'tailored_resume.md', 'questions_output.md', 'talking_points_output.md']:
                 if os.path.exists(f):
                     os.remove(f)
 
-            # Instantiate and run your crew class synchronously
+            # Run CrewAI Framework
             crew_instance = JobApplicationCrew().crew()
             result = crew_instance.kickoff(inputs=crew_inputs)
             st.session_state.crew_result = result
             
-            # 👇 CRITICAL FIX: Load file content into session memory immediately 👇
+            # Load into persistent memory instantly
             if os.path.exists('strategy_output.md'):
                 with open('strategy_output.md', 'r', encoding='utf-8') as f:
                     st.session_state.strategy_data = f.read()

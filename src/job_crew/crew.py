@@ -86,57 +86,53 @@ class JobApplicationCrew:
         )
 
     def crew(self) -> Crew:
-        research_task = Task(
+        # Task 1: Research the job and align it with the candidate profile
+        strategy_task = Task(
             description=(
-                "Analyze the job posting URL provided ({job_posting_url}) to extract key skills, "
-                "experiences, and qualifications required. Use the tools to gather content and identify "
-                "and categorize the requirements."
+                "1. Analyze the job posting URL provided ({job_posting_url}) using your search tools to extract key skills, "
+                "experiences, and qualifications required for the role.\n"
+                "2. Synthesize this data with the candidate's background details provided in {personal_writeup} and {profile_urls}.\n"
+                "3. Generate a comprehensive strategy document highlighting the most crucial alignment points, mandatory skills, "
+                "and recommended baseline presentation strategy. Do not invent facts."
             ),
-            expected_output="A structured list of job requirements, including necessary skills, qualifications, and experiences.",
-            agent=self.researcher,
-            async_execution=True
+            expected_output="A structured document detailing the job requirements matched explicitly against the candidate's core strengths.",
+            output_file="strategy_output.md", # Matches Tab 1
+            agent=self.resume_strategist,
+            verbose=True
         )
 
-        profile_task = Task(
+        # Task 2: Formulate Expected Interview Questions
+        questions_task = Task(
             description=(
-                "Compile a detailed personal and professional profile using the background profile links or URLs ({profile_urls}), "
-                "and the personal background write-up or file content provided ({personal_writeup}). "
-                "Utilize your tools to extract, read, and synthesize information from these sources."
+                "Review the matching strategy generated in the previous task. Create a set of targeted, highly probable "
+                "technical and situational interview questions specifically tailored for this role and the candidate's profile. "
+                "Include brief guidelines on what a successful answer should highlight based on their background."
             ),
-            expected_output="A comprehensive profile document that includes skills, project experiences, contributions, interests, and communication style.",
-            agent=self.profiler,
-            async_execution=True
+            expected_output="A clean markdown document containing expected interview questions with contextual response guidelines.",
+            output_file="questions_output.md", # Matches Tab 2
+            context=[strategy_task],
+            agent=self.interview_preparer,
+            verbose=True
         )
 
-        resume_strategy_task = Task(
+        # Task 3: Develop Custom Strategic Talking Points
+        talking_points_task = Task(
             description=(
-                "Using the profile and job requirements obtained from previous tasks, tailor the resume to highlight "
-                "the most relevant areas. Employ tools to adjust and enhance the resume content. Make sure this is "
-                "the best resume ever, but don't make up any information. Update every section, including the initial summary, "
-                "work experience, skills, and education. All to better reflect the candidate's abilities and how it matches the job posting."
+                "Develop high-impact, custom interview talking points and behavioral discussion cues. Ensure these "
+                "talking points help the candidate naturally elevate key elements of their project experiences, "
+                "contributions, and technical capabilities to demonstrate immediate value to the hiring manager."
             ),
-            expected_output="An updated resume that effectively highlights the candidate's qualifications and experiences relevant to the job.",
-            output_file="tailored_resume.md",
-            context=[research_task, profile_task],
-            agent=self.resume_strategist
-        )
-
-        interview_preparation_task = Task(
-            description=(
-                "Create a set of potential interview questions and talking points based on the tailored resume and job requirements. "
-                "Utilize tools to generate relevant questions and discussion points. Make sure to use these questions and talking "
-                "points to help the candidate highlight the main points of the resume and how it matches the job posting."
-            ),
-            expected_output="A document containing key questions and talking points that the candidate should prepare for the initial interview.",
-            output_file="interview_materials.md",
-            context=[research_task, profile_task, resume_strategy_task],
-            agent=self.interview_preparer
+            expected_output="A document containing clear bullet points, elevator pitches, and talking points for the interview.",
+            output_file="talking_points_output.md", # Matches Tab 3
+            context=[strategy_task, questions_task],
+            agent=self.interview_preparer,
+            verbose=True
         )
 
         return Crew(
-            agents=[self.researcher, self.profiler, self.resume_strategist, self.interview_preparer],
-            tasks=[research_task, profile_task, resume_strategy_task, interview_preparation_task],
-            process=Process.sequential,
+            agents=[self.resume_strategist, self.interview_preparer],
+            tasks=[strategy_task, questions_task, talking_points_task],
+            process=Process.sequential, # Guarantees each task finishes cleanly before the next begins
             memory=False,
             verbose=True
         )

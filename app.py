@@ -147,7 +147,7 @@ if submit_btn and not st.session_state.crew_running:
     # ─── RUN THE CREW NATIVELY HERE ───
     with st.spinner("Formulating strategy... The crew is analyzing your data live."):
         try:
-            # 👇 ADD THE CLEANUP LOOP EXACTLY HERE (FIRST THING INSIDE TRY) 👇
+            # ✅ ADD THE CLEANUP LOOP EXACTLY HERE:
             for f in ['strategy_output.md', 'tailored_resume.md', 'questions_output.md', 'talking_points_output.md']:
                 if os.path.exists(f):
                     os.remove(f)
@@ -165,6 +165,8 @@ if submit_btn and not st.session_state.crew_running:
                 "❓ Expected Interview Questions", 
                 "📋 Custom Talking Points"
             ])
+            
+            # ... (The rest of your tab rendering code from the previous step)
             
                                 
             with tab1:

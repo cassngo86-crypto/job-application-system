@@ -93,11 +93,27 @@ if submit_btn and not st.session_state.crew_running:
         'profile_urls': profile_url_input if profile_url_input else "No URL provided; check text/attachment profile data.",
         'personal_writeup': final_writeup
     }
-    
-    worker_thread = threading.Thread(target=run_crew_async, args=(crew_inputs,))
-    add_script_run_ctx(worker_thread)
-    worker_thread.start()
 
+    # ─── RUN THE CREW NATIVELY HERE ───
+    with st.spinner("Formulating strategy... The crew is analyzing your data live."):
+        try:
+            # Instantiate and run your crew class synchronously
+            crew_instance = JobApplicationCrew().crew()
+            result = crew_instance.kickoff(inputs=crew_inputs)
+            
+            # Save result to session state and show success
+            st.session_state.crew_result = result
+            st.success("Analysis Complete!")
+            st.markdown(result)
+            
+        except Exception as e:
+            st.error(f"An execution error occurred: {str(e)}")
+            
+        finally:
+            # Re-enable the button so the user can run it again if needed
+            st.session_state.crew_running = False
+    
+    
 # Live Interface Rendering Contexts
 if st.session_state.crew_running:
     st.info("🤖 Multi-agent runtime pipeline active. Running web scraping, profile synthesis, and building materials...")

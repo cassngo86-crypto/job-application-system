@@ -1,35 +1,32 @@
 import os
 import streamlit as st  
-from crewai import Agent, Crew, Process, Task # <--- REMOVED 'LLM' FROM HERE
-from crewai_tools import ScrapeWebsiteTool, SerperDevTool
-from langchain_openai import ChatOpenAI # <--- ADD THIS IMPORT FOR THE LLM
+from crewai import Agent, Crew, Process, Task
+# Remove ScrapeWebsiteTool completely to prevent browser page-load locks
+from crewai_tools import SerperDevTool 
+from langchain_openai import ChatOpenAI
 
 class JobApplicationCrew:
     def __init__(self) -> None:
-        # 1. Extract and sanitize keys
         openrouter_key = str(st.secrets["OPENROUTER_API_KEY"]).strip()
         serper_key = str(st.secrets["SERPER_API_KEY"]).strip()
         
-        # 2. Sync to environment variables
         os.environ["OPENROUTER_API_KEY"] = openrouter_key
         os.environ["SERPER_API_KEY"] = serper_key
 
-        
-        # 3. Configure OpenRouter using ChatOpenAI (Native to version 0.28.8)
+        # Configure the LLM with a strict local request timeout limit
         self.openrouter_llm = ChatOpenAI(
             model="openai/gpt-4o-mini",
             openai_api_base="https://openrouter.ai/api/v1",
             openai_api_key=openrouter_key,
-            request_timeout=60.0
+            max_tokens=2000,
+            timeout=30.0, # Enforces a hard network drop if OpenRouter stalls
+            max_retries=1
         )
-        
-        # 4. Initialize web tools
-        self.search_tool = SerperDevTool()
-        self.scrape_tool = ScrapeWebsiteTool()
 
-        # 4. Initialize web tools
+        # Use only the search tool for now to keep execution lean and fast
         self.search_tool = SerperDevTool()
-        self.scrape_tool = ScrapeWebsiteTool()
+
+    # Make sure verbose=True and max_iter are set on your Agents below!
 
         # Define Agents directly and bind the secure LLM configuration object
         self.researcher = Agent(

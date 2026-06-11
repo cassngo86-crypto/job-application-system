@@ -34,14 +34,11 @@ if "crew_result" not in st.session_state:
 
 def run_crew_async(inputs):
     try:
-        # Create an instance and call the crew method directly
-        crew_instance = JobApplicationCrew().crew()
-        result = crew_instance.kickoff(inputs=inputs)
-        st.session_state.crew_result = result
+        # Run the crew without touching st.session_state inside here
+        result = JobApplicationCrew().crew().kickoff(inputs=inputs)
+        return result
     except Exception as e:
-        st.session_state.crew_result = f"Error during execution: {str(e)}"
-    finally:
-        st.session_state.crew_running = False
+        print(f"Error running crew: {e}")
 
 # Layout Forms
 with st.sidebar:

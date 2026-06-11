@@ -37,7 +37,7 @@ class JobApplicationCrew:
                 "information from job postings is unmatched. Your skills help pinpoint the necessary "
                 "qualifications and skills sought by employers, forming the foundation for effective application tailoring."
             ),
-            tools=[self.scrape_tool, self.search_tool],
+            tools=[self.search_tool],
             llm=self.openrouter_llm,  
             verbose=True,
             max_iter=4
@@ -51,7 +51,7 @@ class JobApplicationCrew:
                 "from diverse sources to craft comprehensive personal and professional profiles, "
                 "laying the groundwork for personalized resume enhancements."
             ),
-            tools=[self.scrape_tool, self.search_tool],
+            tools=[self.search_tool],
             llm=self.openrouter_llm,  
             verbose=True,
             max_iter=4
@@ -65,7 +65,7 @@ class JobApplicationCrew:
                 "highlight the most relevant skills and experiences, ensuring they resonate perfectly "
                 "with the job's requirements."
             ),
-            tools=[self.scrape_tool, self.search_tool],
+            tools=[self.search_tool],
             llm=self.openrouter_llm,  
             verbose=True,
             max_iter=4
@@ -79,7 +79,7 @@ class JobApplicationCrew:
                 "to formulate key questions and talking points, you prepare candidates for success, "
                 "ensuring they can confidently address all aspects of the job they are applying for."
             ),
-            tools=[self.scrape_tool, self.search_tool],
+            tools=[self.search_tool],
             llm=self.openrouter_llm,  
             verbose=True,
             max_iter=4

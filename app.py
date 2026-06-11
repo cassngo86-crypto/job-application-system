@@ -15,6 +15,7 @@ import io
 from docx import Document
 import threading
 from streamlit.runtime.scriptrunner import add_script_run_ctx
+from docx import Document
 
 # Add source directory path and import your crew module
 sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
@@ -32,6 +33,55 @@ if "crew_running" not in st.session_state:
 if "crew_result" not in st.session_state:
     st.session_state.crew_result = None
 
+import os
+import io
+import streamlit as st
+from docx import Document  # python-docx is already installed in your environment
+
+def convert_md_to_docx(md_text):
+    """Converts raw markdown text into a downloadable Word Document (.docx) bytes stream"""
+    doc = Document()
+    # Simple line-by-line parsing for basic markdown compatibility (headers and paragraphs)
+    for line in md_text.split('\n'):
+        stripped = line.strip()
+        if stripped.startswith('### '):
+            doc.add_heading(stripped[4:], level=3)
+        elif stripped.startswith('## '):
+            doc.add_heading(stripped[3:], level=2)
+        elif stripped.startswith('# '):
+            doc.add_heading(stripped[2:], level=1)
+        elif stripped.startswith('- ') or stripped.startswith('* '):
+            doc.add_paragraph(stripped[2:], style='List Bullet')
+        elif stripped:
+            doc.add_paragraph(stripped)
+            
+    bio = io.BytesIO()
+    doc.save(bio)
+    return bio.getvalue()
+
+def render_download_buttons(file_content, base_filename):
+    """Renders side-by-side download buttons for TXT and Word documents"""
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.download_button(
+            label="📥 Download as TXT",
+            data=file_content,
+            file_name=f"{base_filename}.txt",
+            mime="text/plain",
+            key=f"txt_{base_filename}"
+        )
+        
+    with col2:
+        docx_bytes = convert_md_to_docx(file_content)
+        st.download_button(
+            label="📥 Download as Word (DOCX)",
+            data=docx_bytes,
+            file_name=f"{base_filename}.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            key=f"docx_{base_filename}"
+        )
+        
 def run_crew_async(inputs):
     try:
         # Run the crew without touching st.session_state inside here
@@ -94,47 +144,72 @@ if submit_btn and not st.session_state.crew_running:
         'personal_writeup': final_writeup
     }
 
-  
     # ─── RUN THE CREW NATIVELY HERE ───
     with st.spinner("Formulating strategy... The crew is analyzing your data live."):
         try:
+            # 👇 ADD THE CLEANUP LOOP EXACTLY HERE (FIRST THING INSIDE TRY) 👇
+            for f in ['strategy_output.md', 'tailored_resume.md', 'questions_output.md', 'talking_points_output.md']:
+                if os.path.exists(f):
+                    os.remove(f)
+
             # Instantiate and run your crew class synchronously
             crew_instance = JobApplicationCrew().crew()
             result = crew_instance.kickoff(inputs=crew_inputs)
             
-            # Save final raw result to session state
-            st.session_state.crew_result = result
             st.success("Analysis Complete!")
             
             # ─── STREAMLIT INTERACTIVE TABS LAYOUT ───
-            # Create professional separate tabs for your structural outputs
-            tab1, tab2, tab3 = st.tabs([
+            tab1, tab2, tab3, tab4 = st.tabs([
                 "🎯 Tailored Strategy & Prep", 
+                "📄 Custom Resume",
                 "❓ Expected Interview Questions", 
                 "📋 Custom Talking Points"
             ])
             
+                                
             with tab1:
                 st.subheader("Application Strategy & Profile Alignment")
-                # Pull specific task output if defined, otherwise display main result safely
-                if len(crew_instance.tasks) > 0:
-                    st.markdown(crew_instance.tasks[0].output.exported_output)
+                if os.path.exists('strategy_output.md'):
+                    with open('strategy_output.md', 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    st.markdown(content)
+                    st.divider()
+                    render_download_buttons(content, "application_strategy")
                 else:
                     st.markdown(result)
                     
             with tab2:
-                st.subheader("Targeted Interview Preparation Questions")
-                if len(crew_instance.tasks) > 1:
-                    st.markdown(crew_instance.tasks[1].output.exported_output)
+                st.subheader("Tailored Resume Content")
+                if os.path.exists('tailored_resume.md'):
+                    with open('tailored_resume.md', 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    st.markdown(content)
+                    st.divider()
+                    render_download_buttons(content, "tailored_resume")
                 else:
-                    st.info("Review your primary strategy or check task order definitions.")
+                    st.info("The resume customization task did not compile a separate file.")
                     
             with tab3:
-                st.subheader("Key Interview Talking Points")
-                if len(crew_instance.tasks) > 2:
-                    st.markdown(crew_instance.tasks[2].output.exported_output)
+                st.subheader("Targeted Interview Preparation Questions")
+                if os.path.exists('questions_output.md'):
+                    with open('questions_output.md', 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    st.markdown(content)
+                    st.divider()
+                    render_download_buttons(content, "interview_questions")
                 else:
-                    st.info("Review your primary strategy or check task order definitions.")
+                    st.info("Interview questions preparation was interrupted or incomplete.")
+                    
+            with tab4:
+                st.subheader("Key Interview Talking Points")
+                if os.path.exists('talking_points_output.md'):
+                    with open('talking_points_output.md', 'r', encoding='utf-8') as f:
+                        content = f.read()
+                    st.markdown(content)
+                    st.divider()
+                    render_download_buttons(content, "interview_talking_points")
+                else:
+                    st.info("Strategic talking points document was interrupted or incomplete.")
             
         except Exception as e:
             st.error(f"An execution error occurred: {str(e)}")

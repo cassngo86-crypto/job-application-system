@@ -42,10 +42,10 @@ class JobApplicationCrew:
         )
 
     def crew(self) -> Crew:
-        # 2. Define Tasks explicitly with proper inputs matching app.py
+        # Task 1: Strategy and Alignment Analysis
         strategy_task = Task(
             description=(
-                "Analyze the provided job destination requirements and candidate details. "
+                "Analyze the provided job requirements and candidate details. "
                 "Using the context directly from {personal_writeup} and the reference URL {job_posting_url}, "
                 "generate a comprehensive strategy document highlighting the most crucial alignment points, "
                 "mandatory skills, and recommended presentation strategy. Work strictly with the text provided."
@@ -55,32 +55,47 @@ class JobApplicationCrew:
             agent=self.resume_strategist
         )
 
+        # Task 2: Tailor the Resume (The Missing Step)
+        resume_task = Task(
+            description=(
+                "Using the alignment strategy obtained from the previous task, tailor the candidate's professional profile "
+                "and background text to highlight the most relevant areas matching the job description. "
+                "Update sections such as the initial summary, work experience, skills, and projects to better reflect "
+                "how their abilities fit the job posting. Do not invent any false experiences or facts."
+            ),
+            expected_output="An updated, fully customized resume document structured beautifully in clean markdown.",
+            output_file="tailored_resume.md", # Unique file target
+            context=[strategy_task],
+            agent=self.resume_strategist
+        )
+
+        # Task 3: Formulate Expected Interview Questions
         questions_task = Task(
             description=(
-                "Review the matching strategy generated in the previous task. Create a set of targeted, highly probable "
-                "technical and situational interview questions specifically tailored for this role and the candidate's profile."
+                "Review the matching strategy and the tailored resume generated in the previous tasks. Create a set of targeted, "
+                "highly probable technical and situational interview questions specifically tailored for this role and the candidate's profile."
             ),
             expected_output="A clean markdown document containing expected interview questions with contextual response guidelines.",
             output_file="questions_output.md",
-            context=[strategy_task], # Native task sequencing context matching
+            context=[strategy_task, resume_task],
             agent=self.interview_preparer
         )
 
+        # Task 4: Develop Custom Strategic Talking Points
         talking_points_task = Task(
             description=(
-                "Develop high-impact, custom interview talking points and behavioral discussion cues based on the strategy "
-                "to help the candidate naturally elevate key elements of their project experiences during the conversation."
+                "Develop high-impact, custom interview talking points, elevator pitches, and behavioral discussion cues based on the strategy "
+                "to help the candidate naturally highlight key elements of their project experiences during the conversation."
             ),
-            expected_output="A clean markdown document containing clear bullet points, elevator pitches, and talking points for the interview.",
+            expected_output="A clean markdown document containing clear bullet points and strategic talking points for the interview.",
             output_file="talking_points_output.md",
-            context=[strategy_task, questions_task],
+            context=[strategy_task, resume_task, questions_task],
             agent=self.interview_preparer
         )
 
-        # 3. Assemble and return the Crew object
         return Crew(
             agents=[self.resume_strategist, self.interview_preparer],
-            tasks=[strategy_task, questions_task, talking_points_task],
+            tasks=[strategy_task, resume_task, questions_task, talking_points_task],
             process=Process.sequential,
             memory=False,
             verbose=True

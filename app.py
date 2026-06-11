@@ -28,6 +28,14 @@ st.title("💼 Multi-Agent Job Tailoring System")
 st.caption("Coordinate autonomous agents to evaluate listings, profiles, and deliver targeted interview briefs.")
 
 # Initialize background worker states
+if "strategy_data" not in st.session_state:
+    st.session_state.strategy_data = None
+if "resume_data" not in st.session_state:
+    st.session_state.resume_data = None
+if "questions_data" not in st.session_state:
+    st.session_state.questions_data = None
+if "talking_points_data" not in st.session_state:
+    st.session_state.talking_points_data = None
 if "crew_running" not in st.session_state:
     st.session_state.crew_running = False
 if "crew_result" not in st.session_state:
@@ -132,6 +140,12 @@ if submit_btn and not st.session_state.crew_running:
     st.session_state.crew_running = True
     st.session_state.crew_result = None
     
+    # Reset stored outputs on a new manual run
+    st.session_state.strategy_data = None
+    st.session_state.resume_data = None
+    st.session_state.questions_data = None
+    st.session_state.talking_points_data = None
+    
     # Consolidate text content based on what the user provided
     final_writeup = text_summary
     if uploaded_text_content:
@@ -147,7 +161,7 @@ if submit_btn and not st.session_state.crew_running:
     # ─── RUN THE CREW NATIVELY HERE ───
     with st.spinner("Formulating strategy... The crew is analyzing your data live."):
         try:
-            # ✅ ADD THE CLEANUP LOOP EXACTLY HERE:
+            # Clean up old files from past system sessions
             for f in ['strategy_output.md', 'tailored_resume.md', 'questions_output.md', 'talking_points_output.md']:
                 if os.path.exists(f):
                     os.remove(f)
@@ -155,67 +169,72 @@ if submit_btn and not st.session_state.crew_running:
             # Instantiate and run your crew class synchronously
             crew_instance = JobApplicationCrew().crew()
             result = crew_instance.kickoff(inputs=crew_inputs)
+            st.session_state.crew_result = result
             
+            # 👇 CRITICAL FIX: Load file content into session memory immediately 👇
+            if os.path.exists('strategy_output.md'):
+                with open('strategy_output.md', 'r', encoding='utf-8') as f:
+                    st.session_state.strategy_data = f.read()
+            if os.path.exists('tailored_resume.md'):
+                with open('tailored_resume.md', 'r', encoding='utf-8') as f:
+                    st.session_state.resume_data = f.read()
+            if os.path.exists('questions_output.md'):
+                with open('questions_output.md', 'r', encoding='utf-8') as f:
+                    st.session_state.questions_data = f.read()
+            if os.path.exists('talking_points_output.md'):
+                with open('talking_points_output.md', 'r', encoding='utf-8') as f:
+                    st.session_state.talking_points_data = f.read()
+
             st.success("Analysis Complete!")
-            
-            # ─── STREAMLIT INTERACTIVE TABS LAYOUT ───
-            tab1, tab2, tab3, tab4 = st.tabs([
-                "🎯 Tailored Strategy & Prep", 
-                "📄 Custom Resume",
-                "❓ Expected Interview Questions", 
-                "📋 Custom Talking Points"
-            ])
-            
-            # ... (The rest of your tab rendering code from the previous step)
-            
-                                
-            with tab1:
-                st.subheader("Application Strategy & Profile Alignment")
-                if os.path.exists('strategy_output.md'):
-                    with open('strategy_output.md', 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    st.markdown(content)
-                    st.divider()
-                    render_download_buttons(content, "application_strategy")
-                else:
-                    st.markdown(result)
-                    
-            with tab2:
-                st.subheader("Tailored Resume Content")
-                if os.path.exists('tailored_resume.md'):
-                    with open('tailored_resume.md', 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    st.markdown(content)
-                    st.divider()
-                    render_download_buttons(content, "tailored_resume")
-                else:
-                    st.info("The resume customization task did not compile a separate file.")
-                    
-            with tab3:
-                st.subheader("Targeted Interview Preparation Questions")
-                if os.path.exists('questions_output.md'):
-                    with open('questions_output.md', 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    st.markdown(content)
-                    st.divider()
-                    render_download_buttons(content, "interview_questions")
-                else:
-                    st.info("Interview questions preparation was interrupted or incomplete.")
-                    
-            with tab4:
-                st.subheader("Key Interview Talking Points")
-                if os.path.exists('talking_points_output.md'):
-                    with open('talking_points_output.md', 'r', encoding='utf-8') as f:
-                        content = f.read()
-                    st.markdown(content)
-                    st.divider()
-                    render_download_buttons(content, "interview_talking_points")
-                else:
-                    st.info("Strategic talking points document was interrupted or incomplete.")
             
         except Exception as e:
             st.error(f"An execution error occurred: {str(e)}")
-            
         finally:
-            # Re-enable the button so the user can run it again if needed
             st.session_state.crew_running = False
+
+# ─── DISPLAY THE TABS RENDERING OUTSIDE THE BUTTON RUN BLOCK ───
+# This ensures that even when downloads rerun the script, the content persists!
+if st.session_state.strategy_data or st.session_state.resume_data:
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🎯 Tailored Strategy & Prep", 
+        "📄 Custom Resume",
+        "❓ Expected Interview Questions", 
+        "📋 Custom Talking Points"
+    ])
+    
+    with tab1:
+        st.subheader("Application Strategy & Profile Alignment")
+        if st.session_state.strategy_data:
+            st.markdown(st.session_state.strategy_data)
+            st.divider()
+            render_download_buttons(st.session_state.strategy_data, "application_strategy")
+        else:
+            st.info("No strategy data available.")
+            
+    with tab2:
+        st.subheader("Tailored Resume Content")
+        if st.session_state.resume_data:
+            st.markdown(st.session_state.resume_data)
+            st.divider()
+            render_download_buttons(st.session_state.resume_data, "tailored_resume")
+        else:
+            st.info("The resume customization task did not compile a separate file.")
+            
+    with tab3:
+        st.subheader("Targeted Interview Preparation Questions")
+        if st.session_state.questions_data:
+            st.markdown(st.session_state.questions_data)
+            st.divider()
+            render_download_buttons(st.session_state.questions_data, "interview_questions")
+        else:
+            st.info("Interview questions preparation was incomplete.")
+            
+    with tab4:
+        st.subheader("Key Interview Talking Points")
+        if st.session_state.talking_points_data:
+            st.markdown(st.session_state.talking_points_data)
+            st.divider()
+            render_download_buttons(st.session_state.talking_points_data, "interview_talking_points")
+        else:
+            st.info("Strategic talking points document was incomplete.")
+      

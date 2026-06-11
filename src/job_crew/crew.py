@@ -14,13 +14,14 @@ class JobApplicationCrew:
         os.environ["OPENROUTER_API_KEY"] = openrouter_key
         os.environ["SERPER_API_KEY"] = serper_key
 
+        
         # 3. Configure OpenRouter using ChatOpenAI (Native to version 0.28.8)
         self.openrouter_llm = ChatOpenAI(
-            model="openrouter/openai/gpt-oss-120b",
+            model="openai/gpt-4o-mini",
             openai_api_base="https://openrouter.ai/api/v1",
             openai_api_key=openrouter_key
         )
-
+        
         # 4. Initialize web tools
         self.search_tool = SerperDevTool()
         self.scrape_tool = ScrapeWebsiteTool()

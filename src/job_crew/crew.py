@@ -19,7 +19,8 @@ class JobApplicationCrew:
         self.openrouter_llm = ChatOpenAI(
             model="openai/gpt-4o-mini",
             openai_api_base="https://openrouter.ai/api/v1",
-            openai_api_key=openrouter_key
+            openai_api_key=openrouter_key,
+            request_timeout=60.0
         )
         
         # 4. Initialize web tools
@@ -41,7 +42,8 @@ class JobApplicationCrew:
             ),
             tools=[self.scrape_tool, self.search_tool],
             llm=self.openrouter_llm,  
-            verbose=True
+            verbose=True,
+            max_iter=4
         )
 
         self.profiler = Agent(
@@ -54,7 +56,8 @@ class JobApplicationCrew:
             ),
             tools=[self.scrape_tool, self.search_tool],
             llm=self.openrouter_llm,  
-            verbose=True
+            verbose=True,
+            max_iter=4
         )
 
         self.resume_strategist = Agent(
@@ -67,7 +70,8 @@ class JobApplicationCrew:
             ),
             tools=[self.scrape_tool, self.search_tool],
             llm=self.openrouter_llm,  
-            verbose=True
+            verbose=True,
+            max_iter=4
         )
 
         self.interview_preparer = Agent(
@@ -80,7 +84,8 @@ class JobApplicationCrew:
             ),
             tools=[self.scrape_tool, self.search_tool],
             llm=self.openrouter_llm,  
-            verbose=True
+            verbose=True,
+            max_iter=4
         )
 
     def crew(self) -> Crew:

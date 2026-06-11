@@ -94,6 +94,7 @@ if submit_btn and not st.session_state.crew_running:
         'personal_writeup': final_writeup
     }
 
+  
     # ─── RUN THE CREW NATIVELY HERE ───
     with st.spinner("Formulating strategy... The crew is analyzing your data live."):
         try:
@@ -101,10 +102,39 @@ if submit_btn and not st.session_state.crew_running:
             crew_instance = JobApplicationCrew().crew()
             result = crew_instance.kickoff(inputs=crew_inputs)
             
-            # Save result to session state and show success
+            # Save final raw result to session state
             st.session_state.crew_result = result
             st.success("Analysis Complete!")
-            st.markdown(result)
+            
+            # ─── STREAMLIT INTERACTIVE TABS LAYOUT ───
+            # Create professional separate tabs for your structural outputs
+            tab1, tab2, tab3 = st.tabs([
+                "🎯 Tailored Strategy & Prep", 
+                "❓ Expected Interview Questions", 
+                "📋 Custom Talking Points"
+            ])
+            
+            with tab1:
+                st.subheader("Application Strategy & Profile Alignment")
+                # Pull specific task output if defined, otherwise display main result safely
+                if len(crew_instance.tasks) > 0:
+                    st.markdown(crew_instance.tasks[0].output.exported_output)
+                else:
+                    st.markdown(result)
+                    
+            with tab2:
+                st.subheader("Targeted Interview Preparation Questions")
+                if len(crew_instance.tasks) > 1:
+                    st.markdown(crew_instance.tasks[1].output.exported_output)
+                else:
+                    st.info("Review your primary strategy or check task order definitions.")
+                    
+            with tab3:
+                st.subheader("Key Interview Talking Points")
+                if len(crew_instance.tasks) > 2:
+                    st.markdown(crew_instance.tasks[2].output.exported_output)
+                else:
+                    st.info("Review your primary strategy or check task order definitions.")
             
         except Exception as e:
             st.error(f"An execution error occurred: {str(e)}")
@@ -112,65 +142,3 @@ if submit_btn and not st.session_state.crew_running:
         finally:
             # Re-enable the button so the user can run it again if needed
             st.session_state.crew_running = False
-    
-    
-# Live Interface Rendering Contexts
-if st.session_state.crew_running:
-    st.info("🤖 Multi-agent runtime pipeline active. Running web scraping, profile synthesis, and building materials...")
-    st.spinner("Agents are collaborating...")
-    st.rerun()
-
-elif st.session_state.crew_result:
-    st.success("🎉 Crew completed assignment pipeline successfully!")
-    
-    tab1, tab2, tab3 = st.tabs(["📝 Tailored Resume", "🎯 Interview Preparation Materials", "⚙️ Raw Run Trace"])
-    
-    with tab1:
-        if os.path.exists("tailored_resume.md"):
-            with open("tailored_resume.md", "r", encoding="utf-8") as f:
-                resume_content = f.read()
-            
-            # Compile into Word Document structure
-            doc1 = Document()
-            doc1.add_paragraph(resume_content)
-            bio1 = io.BytesIO()
-            doc1.save(bio1)
-            
-            # Download as Word (.docx)
-            st.download_button(
-                label="📥 Download Tailored Resume (.docx)",
-                data=bio1.getvalue(),
-                file_name="tailored_resume.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
-            st.markdown("---")
-            st.markdown(resume_content)
-        else:
-            st.warning("Resume file artifact was not committed successfully to workspace.")
-            
-    with tab2:
-        if os.path.exists("interview_materials.md"):
-            with open("interview_materials.md", "r", encoding="utf-8") as f:
-                interview_content = f.read()
-            
-            # Compile into Word Document structure
-            doc2 = Document()
-            doc2.add_paragraph(interview_content)
-            bio2 = io.BytesIO()
-            doc2.save(bio2)
-            
-            # Download as Word (.docx)
-            st.download_button(
-                label="📥 Download Interview Prep Materials (.docx)",
-                data=bio2.getvalue(),
-                file_name="interview_materials.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
-            st.markdown("---")
-            st.markdown(interview_content)
-        else:
-            st.warning("Interview prep file artifact was not committed successfully to workspace.")
-            
-    with tab3:
-        st.subheader("Raw Output Payload")
-        st.write(str(st.session_state.crew_result))

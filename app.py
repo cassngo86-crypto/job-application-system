@@ -150,9 +150,9 @@ with st.sidebar:
     st.subheader("📝 Background Details")
     # 1. Personal Bio Area moved to Sidebar
     text_summary = st.text_area(
-        "Personal Bio or Background Summary", 
-        value="Experienced Software Engineer with a background in full-stack systems...",
-        rows=5
+    "Personal Bio or Background Summary",
+    value="Experienced Software Engineer with a background in full...",
+    height=150  # Uses pixels instead of rows (150px is roughly 5-6 rows tall)
     )
     
     # 2. Profile Source Selection & File Uploader moved to Sidebar

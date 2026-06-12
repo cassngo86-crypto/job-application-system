@@ -117,6 +117,9 @@ with st.sidebar:
 # =====================================================================
 # STEP 1: INITIALIZE ALL STATE KEYS AND VARIABLES AT THE VERY TOP
 # =====================================================================
+# =====================================================================
+# STEP 1: INITIALIZE STATE KEYS AT THE VERY TOP
+# =====================================================================
 if "uploaded_text_content" not in st.session_state:
     st.session_state.uploaded_text_content = ""
 
@@ -129,94 +132,98 @@ if "questions_data" not in st.session_state:
 if "talking_points_data" not in st.session_state:
     st.session_state.talking_points_data = None
 
-# Pre-define fallback variables to guarantee they ALWAYS exist
+# Fallback variables to prevent downstream NameErrors
 profile_url_input = ""
 uploaded_text_content = ""
 text_summary = ""
 
 
 # =====================================================================
-# STEP 2: RENDER THE USER INTERFACE INPUT FIELDS
+# STEP 2: SIDEBAR CONTROLS (INPUTS & KICKOFF BUTTON)
 # =====================================================================
-# Main Bio/Resume Text Input Area
-text_summary = st.text_area(
-    "Paste Personal Bio or Background Summary", 
-    value="Experienced Software Engineer with a background in full-stack systems..."
-)
-
-# Profile Source Selection & File Uploader Block
-if profile_source == "Provide Profile URL (LinkedIn / GitHub / Portfolio)":
-    profile_url_input = st.text_input("Profile URL", value="https://github.com/joaomdmoura")
-else:
-    uploaded_file = st.file_uploader(
-        "Upload background profile or existing resume", 
-        type=["txt", "md"],
-        key="profile_file_uploader"
+with st.sidebar:
+    st.header("⚙️ Configuration")
+    
+    # Ensure job_url widget is visible here
+    # job_url = st.text_input("Job Posting URL", value="...")
+    
+    st.subheader("📝 Background Details")
+    # 1. Personal Bio Area moved to Sidebar
+    text_summary = st.text_area(
+        "Personal Bio or Background Summary", 
+        value="Experienced Software Engineer with a background in full-stack systems...",
+        rows=5
     )
     
-    if uploaded_file is not None:
-        try:
-            file_bytes = uploaded_file.read()
-            text_content = file_bytes.decode("utf-8")
-            
-            # Lock into memory safely
-            if st.session_state.uploaded_text_content != text_content:
-                st.session_state.uploaded_text_content = text_content
-                st.success("File uploaded and saved to memory successfully!")
-        except Exception as e:
-            st.error(f"Error reading file stream: {str(e)}")
+    # 2. Profile Source Selection & File Uploader moved to Sidebar
+    if profile_source == "Provide Profile URL (LinkedIn / GitHub / Portfolio)":
+        profile_url_input = st.text_input("Profile URL", value="https://github.com/joaomdmoura")
+    else:
+        uploaded_file = st.file_uploader(
+            "Upload background profile or existing resume", 
+            type=["txt", "md"],
+            key="profile_file_uploader"
+        )
+        
+        if uploaded_file is not None:
+            try:
+                file_bytes = uploaded_file.read()
+                text_content = file_bytes.decode("utf-8")
+                
+                # Lock into session memory safely
+                if st.session_state.uploaded_text_content != text_content:
+                    st.session_state.uploaded_text_content = text_content
+                    st.sidebar.success("File saved to memory!")
+            except Exception as e:
+                st.sidebar.error(f"Error reading file stream: {str(e)}")
 
-    # Pull latest data from stable session memory
-    uploaded_text_content = st.session_state.uploaded_text_content
+        uploaded_text_content = st.session_state.uploaded_text_content
 
-st.markdown("---")
+    st.markdown("---")
+    
+    # 3. Kickoff Button moved to Sidebar
+    submit_btn = st.sidebar.button(
+        "Kickoff Crew Agents", 
+        disabled=st.session_state.crew_running,
+        use_container_width=True
+    )
 
 
 # =====================================================================
-# STEP 3: THE ACTION TRIGGER BUTTON
-# =====================================================================
-submit_btn = st.button("Kickoff Crew Agents", disabled=st.session_state.crew_running)
-
-
-# =====================================================================
-# STEP 4: THE CONTROLLER ACTION BLOCK (READS COMPLETED STEP 1 & 2 DATA)
+# STEP 3: THE CONTROLLER ACTION BLOCK
 # =====================================================================
 if submit_btn and not st.session_state.crew_running:
     st.session_state.crew_running = True
     st.session_state.crew_result = None
     
-    # Reset stored outputs on a new fresh run
+    # Clear old results for a clean slate
     st.session_state.strategy_data = None
     st.session_state.resume_data = None
     st.session_state.questions_data = None
     st.session_state.talking_points_data = None
     
-    # Consolidate text content based on what the user provided
     final_writeup = text_summary
     if uploaded_text_content:
         final_writeup += f"\n\n--- EMBEDDED ATTACHMENT PROFILE CONTENT ---\n{uploaded_text_content}"
     
-    # ✅ NOW crew_inputs CANNOT THROW A NAMEERROR BECAUSE EVERYTHING ABOVE IS LOADED
     crew_inputs = {
-        'job_posting_url': job_url, # Ensure job_url widget is placed above this section
+        'job_posting_url': job_url, 
         'profile_urls': profile_url_input if profile_url_input else "No URL provided; check text/attachment profile data.",
         'personal_writeup': final_writeup
     }
 
-    # ─── RUN THE CREW NATIVELY HERE ───
     with st.spinner("Formulating strategy... The crew is analyzing your data live."):
         try:
-            # Clean up residual layout files
             for f in ['strategy_output.md', 'tailored_resume.md', 'questions_output.md', 'talking_points_output.md']:
                 if os.path.exists(f):
                     os.remove(f)
 
-            # Run CrewAI Framework
+            # Run CrewAI Engine
             crew_instance = JobApplicationCrew().crew()
             result = crew_instance.kickoff(inputs=crew_inputs)
             st.session_state.crew_result = result
             
-            # Load into persistent memory instantly
+            # Commit files back to stable session memory variables
             if os.path.exists('strategy_output.md'):
                 with open('strategy_output.md', 'r', encoding='utf-8') as f:
                     st.session_state.strategy_data = f.read()
@@ -237,35 +244,28 @@ if submit_btn and not st.session_state.crew_running:
         finally:
             st.session_state.crew_running = False
 
-# ─── DISPLAY THE TABS RENDERING OUTSIDE THE BUTTON RUN BLOCK ───
+
 # =====================================================================
-# STEP 5: RECORDING-SAFE SIDEBAR NAVIGATION FOR OUTPUTS
+# STEP 4: MAIN PANE VIEW — OUTPUT DOCUMENTS AS TABS
 # =====================================================================
 if st.session_state.get("strategy_data") or st.session_state.get("resume_data"):
-    st.markdown("---")
+    st.header("🎯 Analysis Outputs")
     
-    # Create an isolated navigation section in the sidebar
-    with st.sidebar:
-        st.header("📋 Navigation Menu")
-        page_selection = st.radio(
-            "Select Output Document to View:",
-            [
-                "🎯 Tailored Strategy & Prep", 
-                "📄 Custom Resume",
-                "❓ Expected Interview Questions", 
-                "📋 Custom Talking Points"
-            ],
-            key="recording_safe_nav"
-        )
-
-    # Render only the selected page content in the main view area
-    if page_selection == "🎯 Tailored Strategy & Prep":
+    # Clean, beautiful output tabs in the main container window
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🎯 Strategy & Prep", 
+        "📄 Custom Resume",
+        "❓ Interview Questions", 
+        "📋 Talking Points"
+    ])
+    
+    with tab1:
         st.subheader("Application Strategy & Profile Alignment")
         st.markdown(st.session_state.strategy_data)
         st.divider()
         render_download_buttons(st.session_state.strategy_data, "application_strategy")
         
-    elif page_selection == "📄 Custom Resume":
+    with tab2:
         st.subheader("Tailored Resume Content")
         if st.session_state.resume_data:
             st.markdown(st.session_state.resume_data)
@@ -274,7 +274,7 @@ if st.session_state.get("strategy_data") or st.session_state.get("resume_data"):
         else:
             st.info("The resume customization task did not compile a separate file.")
             
-    elif page_selection == "❓ Expected Interview Questions":
+    with tab3:
         st.subheader("Targeted Interview Preparation Questions")
         if st.session_state.questions_data:
             st.markdown(st.session_state.questions_data)
@@ -283,7 +283,7 @@ if st.session_state.get("strategy_data") or st.session_state.get("resume_data"):
         else:
             st.info("Interview questions preparation was incomplete.")
             
-    elif page_selection == "📋 Custom Talking Points":
+    with tab4:
         st.subheader("Key Interview Talking Points")
         if st.session_state.talking_points_data:
             st.markdown(st.session_state.talking_points_data)
